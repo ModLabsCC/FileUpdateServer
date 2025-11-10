@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Single File Server</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 720px;
+            margin: 40px auto;
+            padding: 0 16px;
+            color: #222;
+        }
+        h1 {
+            text-align: center;
+        }
+        .card {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            padding: 24px;
+            margin-bottom: 24px;
+            background: #fafafa;
+        }
+        .drop-zone {
+            border: 2px dashed #999;
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: #555;
+            cursor: pointer;
+            transition: border-color 0.2s ease, background-color 0.2s ease;
+        }
+        .drop-zone.dragover {
+            border-color: #0069ff;
+            background-color: #e6f0ff;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        input[type="password"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        button {
+            background: #0069ff;
+            color: #fff;
+            border: none;
+            border-radius: 4px;
+            padding: 10px 16px;
+            cursor: pointer;
+        }
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        .info {
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+        .info strong {
+            display: inline-block;
+            width: 120px;
+        }
+        .warning {
+            color: #b00;
+            font-weight: bold;
+            margin-top: 12px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Single File Server</h1>
+
+    <div class="card">
+        <h2>Current File</h2>
+        {{if .HasFile}}
+        <div class="info">
+            <p><strong>Name:</strong> {{.Meta.OriginalName}}</p>
+            <p><strong>Size:</strong> {{.Meta.Size}} bytes</p>
+            <p><strong>Uploaded:</strong> {{.Meta.UploadedAt}}</p>
+            <p><strong>Download:</strong> <a href="{{.FileEndpoint}}">Download current file</a></p>
+        </div>
+        {{else}}
+        <p>No file uploaded yet.</p>
+        {{end}}
+    </div>
+
+    <div class="card">
+        <h2>Upload New File</h2>
+        {{if not .PasswordIsSet}}
+        <p class="warning">Uploads disabled: set the FILE_UPLOAD_PASSWORD environment variable.</p>
+        {{end}}
+        <form id="upload-form" method="post" action="{{.UploadEndpoint}}" enctype="multipart/form-data">
+            <div id="drop-zone" class="drop-zone">
+                <p>Drag and drop a file here, or click to choose one</p>
+            </div>
+            <input type="file" id="file-input" name="file" accept="*/*" required>
+            <label for="password">Password</label>
+            <input type="password" id="password" name="password" placeholder="Enter upload password" required>
+            <button type="submit" id="submit-btn" {{if not .PasswordIsSet}}disabled{{end}}>Upload</button>
+        </form>
+    </div>
+
+    <script>
+        (function () {
+            function formatBytes(bytes) {
+                if (bytes === 0) return '0 B';
+                const k = 1024;
+                const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+                const i = Math.floor(Math.log(bytes) / Math.log(k));
+                return (bytes / Math.pow(k, i)).toFixed(1) + ' ' + sizes[i];
+            }
+
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('file-input');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+
+            dropZone.addEventListener('dragover', (event) => {
+                event.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (event) => {
+                event.preventDefault();
+                dropZone.classList.remove('dragover');
+
+                if (event.dataTransfer.files.length > 0) {
+                    fileInput.files = event.dataTransfer.files;
+                    const file = event.dataTransfer.files[0];
+                    dropZone.querySelector('p').textContent = file.name + ' (' + formatBytes(file.size) + ')';
+                }
+            });
+
+            fileInput.addEventListener('change', () => {
+                if (fileInput.files.length > 0) {
+                    const file = fileInput.files[0];
+                    dropZone.querySelector('p').textContent = file.name + ' (' + formatBytes(file.size) + ')';
+                }
+            });
+        }());
+    </script>
+</body>
+</html>
+
+
